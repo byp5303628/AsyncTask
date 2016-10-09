@@ -1,6 +1,6 @@
 package net.ethanpark.common.task;
 
-import java.util.Date;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.After;
@@ -28,7 +28,7 @@ public class TaskTest {
 
    @Test
    public void testConstructor1() {
-      Date now = new Date();
+      long now = System.currentTimeMillis();
       Task task = new Task(new Runnable() {
          @Override
          public void run() {
@@ -42,10 +42,10 @@ public class TaskTest {
       });
 
       task.start();
+      task.getResult();
+      long after = System.currentTimeMillis();
 
-      Date after = new Date();
-
-      Assert.assertTrue(after.getTime() - now.getTime() > 1000);
+      Assert.assertTrue(after - now > 1000L);
    }
 
    @Test
@@ -63,7 +63,74 @@ public class TaskTest {
       });
 
       task.start();
+      task.getResult();
 
       Assert.assertNotNull(task.getThrowable());
+   }
+
+   @Test
+   public void testGetResult1() {
+      Task<Integer> task = new Task<>(new Callable<Integer>() {
+         @Override
+         public Integer call() throws Exception {
+            TimeUnit.MILLISECONDS.sleep(1000);
+            return 1;
+         }
+      });
+      task.start();
+
+      Assert.assertTrue(task.getResult() == 1);
+
+      System.out.println(task.getRunningMilliseconds());
+      Assert.assertTrue(task.getRunningMilliseconds() >= 1000L);
+   }
+
+   @Test
+   public void testGetResult2() {
+      Task<Integer> task = new Task<>(new Callable<Integer>() {
+         @Override
+         public Integer call() throws Exception {
+            TimeUnit.MILLISECONDS.sleep(1000);
+            return 1;
+         }
+      });
+      task.start();
+
+      Assert.assertTrue(task.getResult() == 1);
+
+      Assert.assertTrue(task.getRunningMilliseconds() >= 1000L);
+   }
+
+   @Test
+   public void testAwaitToFinish1() {
+      Task<Integer> task = new Task<>(new Callable<Integer>() {
+         @Override
+         public Integer call() throws Exception {
+            TimeUnit.SECONDS.sleep(1);
+            return 1;
+         }
+      });
+      task.start();
+
+      Assert.assertFalse(task.awaitToFinish(500));
+   }
+
+   @Test
+   public void testAwaitToFinish2() {
+      Task<Integer> task = new Task<>(new Callable<Integer>() {
+         @Override
+         public Integer call() throws Exception {
+            TimeUnit.MILLISECONDS.sleep(1000);
+            return 1;
+         }
+      });
+      task.start();
+
+      try {
+         TimeUnit.MILLISECONDS.sleep(1000);
+         Assert.assertTrue(task.awaitToFinish(500));
+      } catch (InterruptedException e) {
+         e.printStackTrace();
+      }
    }
 }

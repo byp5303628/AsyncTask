@@ -8,11 +8,22 @@ import java.util.concurrent.*;
 public class Task<T> {
    private static ExecutorService threadPool;
 
+   private Object lock = new Object();
+
+   /**
+    * Task Status, which is the status to track the life cycle of the task.
+    */
+   private TaskStatus status = TaskStatus.START;
+
    private Future<?> runnableFuture;
 
    private T result;
 
    private Throwable throwable;
+
+   private long startTime;
+
+   private Callable<T> currentCallable;
 
    /**
     * Get the async procedure's exception, if it exists.
@@ -23,48 +34,45 @@ public class Task<T> {
       return throwable;
    }
 
-   public void setThrowable(Throwable throwable) {
-      this.throwable = throwable;
-   }
-
    public Task() {
-      threadPool = Executors.newWorkStealingPool();
+      if (threadPool == null) {
+         synchronized (lock) {
+            if (threadPool == null)
+               threadPool = Executors.newWorkStealingPool();
+         }
+      }
    }
 
    public Task(Runnable runnable) {
       this();
-      runnableFuture = threadPool.submit(() -> {
-         try {
+      currentCallable = new Callable<T>() {
+         @Override
+         public T call() throws Exception {
+            setStatus(TaskStatus.RUNNING);
             runnable.run();
-         } catch (Exception ex) {
-            throwable = ex;
+            return null;
          }
-      });
+      };
    }
 
    public Task(Callable<T> callable) {
       this();
-      runnableFuture = threadPool.submit(() -> {
-         try {
+      currentCallable = new Callable<T>() {
+         @Override
+         public T call() throws Exception {
+            setStatus(TaskStatus.RUNNING);
             return callable.call();
-         } catch (Exception ex) {
-            throwable = ex;
-            return null;
          }
-      });
+      };
    }
 
    /**
     * Start the task
     */
    public void start() {
-      try {
-         result = (T) runnableFuture.get();
-      } catch (InterruptedException e) {
-         e.printStackTrace();
-      } catch (ExecutionException e) {
-         e.printStackTrace();
-      }
+      startTime = System.currentTimeMillis();
+      setStatus(TaskStatus.SCHEDULED);
+      runnableFuture = threadPool.submit(currentCallable);
    }
 
    /**
@@ -73,9 +81,51 @@ public class Task<T> {
     * @return
     */
    public T getResult() {
+      try {
+         result = (T) runnableFuture.get();
+      } catch (Exception e) {
+         throwable = e;
+      }
+
       if (runnableFuture.isDone())
          return result;
 
       return null;
+   }
+
+   public boolean awaitToFinish() {
+      try {
+         result = (T) runnableFuture.get();
+         return true;
+      } catch (Exception e) {
+         throwable = e;
+      }
+      return false;
+   }
+
+   public boolean awaitToFinish(long milliseconds) {
+      try {
+         result = (T) runnableFuture.get(milliseconds, TimeUnit.MILLISECONDS);
+         return true;
+      } catch (Exception e) {
+         throwable = e;
+      }
+      return false;
+   }
+
+   public long getRunningMilliseconds() {
+      return System.currentTimeMillis() - startTime;
+   }
+
+   public TaskStatus getStatus() {
+      synchronized (lock) {
+         return status;
+      }
+   }
+
+   private void setStatus(TaskStatus status) {
+      synchronized (lock) {
+         this.status = status;
+      }
    }
 }
