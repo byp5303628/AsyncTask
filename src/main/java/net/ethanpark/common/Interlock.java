@@ -28,4 +28,24 @@ public class Interlock {
       }
       return needToBeAssigned;
    }
+
+   public static <T> void exchange(Proxy<T> proxy, T value) {
+      proxy.setProxyObj(exchange(proxy.getProxyObj(), value));
+   }
+
+   public static class Proxy<T> {
+      private T proxyObj;
+
+      public Proxy(T t) {
+         this.proxyObj = t;
+      }
+
+      public T getProxyObj() {
+         return proxyObj;
+      }
+
+      public void setProxyObj(T proxyObj) {
+         this.proxyObj = proxyObj;
+      }
+   }
 }
