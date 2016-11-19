@@ -1,6 +1,6 @@
 package net.ethanpark.common.lock;
 
-import java.util.Date;
+import java.sql.Timestamp;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -18,7 +18,7 @@ public class LockTest {
             .println(Thread.currentThread().getName() + " start to execute.");
       try {
          lockObj.lock();
-         System.out.println(new Date(System.currentTimeMillis()));
+         System.out.println(new Timestamp(System.currentTimeMillis()));
          Thread.sleep(1000);
       } catch (Exception ex) {
          ex.printStackTrace();
@@ -56,7 +56,7 @@ public class LockTest {
 
    private void handleInternal(){
       try {
-         System.out.println(new Date(System.currentTimeMillis()));
+         System.out.println(new Timestamp(System.currentTimeMillis()));
          Thread.sleep(1000);
       } catch (Exception ex) {
          ex.printStackTrace();
@@ -67,37 +67,61 @@ public class LockTest {
       }
    }
 
-   public static void main(String[] args) {
+   public static void main(String[] args) throws InterruptedException {
       LockTest lockTest = new LockTest();
-      Thread t1 = new Thread(new TestRunnable(lockTest), "t1");
-      Thread t2 = new Thread(new TestRunnable(lockTest), "t2");
+      Thread t1 = new Thread(new Runnable() {
+         @Override
+         public void run() {
+            lockTest.lock();
+         }
+      }, "t1");
+      Thread t2 = new Thread(new Runnable() {
+         @Override
+         public void run() {
+            lockTest.lock();
+         }
+      }, "t2");
       t1.start();
       t2.start();
-   }
 
-   public static class TestRunnable implements Runnable {
-      private LockTest lockTest;
+      Thread.sleep(3000);
+      System.out.println("------------");
 
-      public TestRunnable(LockTest lockTest) {
-         this.lockTest = lockTest;
-      }
-
-      @Override
-      public void run() {
-         lockTest.lock();
-         try {
-            Thread.sleep(2000);
-         } catch (InterruptedException e) {
-            e.printStackTrace();
+      t1 = new Thread(new Runnable() {
+         @Override
+         public void run() {
+            lockTest.tryLock();
          }
-         lockTest.tryLock();
+      }, "t1");
 
-         try {
-            Thread.sleep(2000);
-         } catch (InterruptedException e) {
-            e.printStackTrace();
+      t2 = new Thread(new Runnable() {
+         @Override
+         public void run() {
+            lockTest.tryLock();
          }
-         lockTest.tryLockWithTimeout();
-      }
+      }, "t2");
+
+      t1.start();
+      t2.start();
+
+      Thread.sleep(3000);
+      System.out.println("------------");
+
+      t1 = new Thread(new Runnable() {
+         @Override
+         public void run() {
+            lockTest.tryLockWithTimeout();
+         }
+      }, "t1");
+
+      t2 = new Thread(new Runnable() {
+         @Override
+         public void run() {
+            lockTest.tryLockWithTimeout();
+         }
+      }, "t2");
+
+      t1.start();
+      t2.start();
    }
 }
