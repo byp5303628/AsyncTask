@@ -1,12 +1,17 @@
 package net.ethanpark.common.task;
 
-import java.util.concurrent.Callable;
-import java.util.concurrent.TimeUnit;
-
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Task Tester.
@@ -49,7 +54,7 @@ public class TaskTest {
    }
 
    @Test
-   public void testConstructor2() {
+   public void testConstructor2() throws IOException {
       Task task = new Task(new Runnable() {
          @Override
          public void run() {
@@ -66,6 +71,21 @@ public class TaskTest {
       task.getResult();
 
       Assert.assertNotNull(task.getThrowable());
+
+      ExecutorService es = Executors.newFixedThreadPool(100);
+
+      ServerSocket serverSocket = new ServerSocket(83);
+
+      es.submit(new Runnable() {
+         @Override
+         public void run() {
+            try {
+               Socket socket = serverSocket.accept();
+            } catch (IOException e) {
+               e.printStackTrace();
+            }
+         }
+      });
    }
 
    @Test

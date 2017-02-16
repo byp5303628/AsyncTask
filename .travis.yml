@@ -1,0 +1,18 @@
+
+language: java
+sudo: required
+
+jdk:
+  - oraclejdk8
+
+dist: trusty
+
+services:
+  - mysql
+
+install: true
+
+script:
+  - jdk_switcher use oraclejdk8
+  - chmod -R 777 ./travis/package.sh
+  - ./travis/package.sh
